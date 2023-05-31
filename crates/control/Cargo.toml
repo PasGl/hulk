@@ -27,3 +27,5 @@ serialize_hierarchy = { workspace = true }
 smallvec = { workspace = true }
 spl_network_messages = { workspace = true }
 types = { workspace = true }
+simple-websockets = "0.1.5"
+byteorder.workspace = true
