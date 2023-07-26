@@ -106,11 +106,11 @@ impl Behavior {
             Action::Calibrate,
         ];
 
-        if let Some(active_since) = self.active_since {
-            if now.duration_since(active_since)? < context.parameters.initial_lookaround_duration {
-                actions.push(Action::LookAround);
-            }
-        }
+        //if let Some(active_since) = self.active_since {
+        //    if now.duration_since(active_since)? < context.parameters.initial_lookaround_duration {
+        //        actions.push(Action::LookAround);
+        //    }
+        //}
 
         match world_state.robot.role {
             Role::DefenderLeft => actions.push(Action::DefendLeft),
