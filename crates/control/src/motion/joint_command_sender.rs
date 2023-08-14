@@ -7,12 +7,12 @@ use framework::AdditionalOutput;
 use hardware::ActuatorInterface;
 use simple_websockets::{Event, EventHub, Responder};
 use types::{
-    BodyJointsCommand, HeadJointsCommand, InertialMeasurementUnitData, Joints, JointsCommand, Leds,
-    MotionSafeExits, MotionSelection, MotionType, SensorData,
+    BodyJointsCommand, ForceSensitiveResistors, HeadJointsCommand, InertialMeasurementUnitData, Joints, JointsCommand, Leds,
+    MotionSafeExits, MotionSelection, MotionType, SensorData, WorldState,
 };
 
 const ACTION_SIZE: usize = 26;
-const OBSERVATION_SIZE: usize = 2 * 26 + 8; // + 2;
+const OBSERVATION_SIZE: usize = 2 * 26 + 2 * 8 + 1; // + 2;
 
 pub struct JointCommandSender {
     positions_residual: Joints<f32>,
@@ -47,6 +47,7 @@ pub struct CycleContext {
     stand_up_back_positions: Input<Joints<f32>, "stand_up_back_positions">,
     stand_up_front_positions: Input<Joints<f32>, "stand_up_front_positions">,
     walk_joints_command: Input<BodyJointsCommand<f32>, "walk_joints_command">,
+    world_state: Input<WorldState, "world_state">,
     hardware_interface: HardwareInterface,
     leds: Input<Leds, "leds">,
 }
@@ -75,10 +76,10 @@ impl JointCommandSender {
         let head_joints_command = context.head_joints_command;
         let motion_selection = context.motion_selection;
         let arms_up_squat = context.arms_up_squat_joints_command;
-        let inertial_measurement_unit = context.sensor_data.inertial_measurement_unit;
+        let inertial_measurement_unit = &context.sensor_data.inertial_measurement_unit;
+        let force_sensitive_resistors = &context.sensor_data.force_sensitive_resistors;
         let jump_left = context.jump_left_joints_command;
         let jump_right = context.jump_right_joints_command;
-        //let robot_to_field = context.robot_to_field.unwrap();
         let sit_down = context.sit_down_joints_command;
         let stand_up_back_positions = context.stand_up_back_positions;
         let stand_up_front_positions = context.stand_up_front_positions;
@@ -148,8 +149,9 @@ impl JointCommandSender {
                     let observation = compose_observation(
                         &current_positions,
                         &compensated_positions,
-                        flat_imu(&inertial_measurement_unit),
-                        // robot_to_field,
+                        flat_imu(inertial_measurement_unit),
+                        flat_fsr(force_sensitive_resistors),
+                        context.world_state,
                     );
                     LittleEndian::write_f32_into(&observation, &mut bytes);
                     responder.send(simple_websockets::Message::Binary(bytes.into()));
@@ -203,18 +205,41 @@ fn flat_imu(imu: &InertialMeasurementUnitData) -> [f32; 8] {
     ]
 }
 
+fn flat_fsr(fsr: &ForceSensitiveResistors) -> [f32; 8] {
+    [
+        fsr.left.front_left,
+        fsr.left.front_right,
+        fsr.left.rear_left,
+        fsr.left.rear_right,
+        fsr.right.front_left,
+        fsr.right.front_right,
+        fsr.right.rear_left,
+        fsr.right.rear_right,
+    ]
+}
+
 fn compose_observation(
     current_positions: &Joints<f32>,
     positions: &Joints<f32>,
     inertial_measurement_unit: [f32; 8],
-    //robot_to_field: &Isometry2<f32>,
+    force_sensitive_resistors: [f32; 8],
+    world_state: &WorldState,
 ) -> [f32; OBSERVATION_SIZE] {
+    let mut distance_to_kick_pose = [10.0];
+    if world_state.kick_decisions.is_some() {
+        distance_to_kick_pose = [world_state.kick_decisions.as_ref().unwrap()[0]
+            .kick_pose
+            .translation
+            .vector
+            .norm()]
+    }
     <[f32; OBSERVATION_SIZE]>::try_from(
         [
             current_positions.to_angles().as_slice(),
             positions.to_angles().as_slice(),
             inertial_measurement_unit.as_slice(),
-            //(robot_to_field * Point2::origin()).coords.as_slice(),
+            force_sensitive_resistors.as_slice(),
+            distance_to_kick_pose.as_slice(),
         ]
         .concat(),
     )

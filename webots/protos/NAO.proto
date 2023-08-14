@@ -1667,13 +1667,13 @@ PROTO NAO [
                                             name "LFoot/Bumper/Right"
                                           }
                                           TouchSensor {
-                                            translation -0.045110 -0.029900 0.070250
+                                            translation -0.045110 -0.024900 0.060250
                                             rotation 0.707108 -0.000001 0.707105 3.141591
                                             name "LFoot/FSR/FrontLeft"
                                             type "force-3d"
                                             lookupTable [0 0 0, 5000 509.68 0]
                                             boundingObject Box {
-                                              size 0.02 0.02 0.001
+                                              size 0.075 0.04 0.001
                                             }
                                             physics Physics {
                                               density -1
@@ -1681,13 +1681,13 @@ PROTO NAO [
                                             }
                                           }
                                           TouchSensor {
-                                            translation -0.045110 0.023100 0.070250
+                                            translation -0.045110 0.020100 0.060250
                                             rotation 0.707108 -0.000001 0.707105 3.141591
                                             name "LFoot/FSR/FrontRight"
                                             type "force-3d"
                                             lookupTable [0 0 0, 5000 509.68 0]
                                             boundingObject Box {
-                                              size 0.02 0.02 0.001
+                                              size 0.075 0.04 0.001
                                             }
                                             physics Physics {
                                               density -1
@@ -1695,13 +1695,13 @@ PROTO NAO [
                                             }
                                           }
                                           TouchSensor {
-                                            translation -0.045110 -0.029900 -0.030250
+                                            translation -0.045110 -0.029900 -0.015250
                                             rotation 0.707108 -0.000001 0.707105 3.141591
                                             name "LFoot/FSR/RearLeft"
                                             type "force-3d"
                                             lookupTable [0 0 0, 5000 509.68 0]
                                             boundingObject Box {
-                                              size 0.02 0.02 0.001
+                                              size 0.075 0.04 0.001
                                             }
                                             physics Physics {
                                               density -1
@@ -1709,13 +1709,13 @@ PROTO NAO [
                                             }
                                           }
                                           TouchSensor {
-                                            translation -0.045110 0.019100 -0.029650
+                                            translation -0.045110 0.015100 -0.015250
                                             rotation 0.707108 -0.000001 0.707105 3.141591
                                             name "LFoot/FSR/RearRight"
                                             type "force-3d"
                                             lookupTable [0 0 0, 5000 509.68 0]
                                             boundingObject Box {
-                                              size 0.02 0.02 0.001
+                                              size 0.075 0.04 0.001
                                             }
                                             physics Physics {
                                               density -1
@@ -2345,13 +2345,13 @@ PROTO NAO [
                                             name "RFoot/Bumper/Right"
                                           }
                                           TouchSensor {
-                                            translation -0.045110 -0.023100 0.070250
+                                            translation -0.045110 -0.021100 0.060250
                                             rotation 0.707108 -0.000001 0.707105 3.141591
                                             name "RFoot/FSR/FrontLeft"
                                             type "force-3d"
                                             lookupTable [0 0 0, 5000 509.68 0]
                                             boundingObject Box {
-                                              size 0.02 0.02 0.001
+                                              size 0.075 0.04 0.001
                                             }
                                             physics Physics {
                                               density -1
@@ -2359,13 +2359,13 @@ PROTO NAO [
                                             }
                                           }
                                           TouchSensor {
-                                            translation -0.045110 0.029900 0.070250
+                                            translation -0.045110 0.023900 0.060250
                                             rotation 0.707108 -0.000001 0.707105 3.141591
                                             name "RFoot/FSR/FrontRight"
                                             type "force-3d"
                                             lookupTable [0 0 0, 5000 509.68 0]
                                             boundingObject Box {
-                                              size 0.02 0.02 0.001
+                                              size 0.075 0.04 0.001
                                             }
                                             physics Physics {
                                               density -1
@@ -2373,13 +2373,13 @@ PROTO NAO [
                                             }
                                           }
                                           TouchSensor {
-                                            translation -0.045110 -0.019100 -0.030250
+                                            translation -0.045110 -0.015100 -0.015250
                                             rotation 0.707108 -0.000001 0.707105 3.141591
                                             name "RFoot/FSR/RearLeft"
                                             type "force-3d"
                                             lookupTable [0 0 0, 5000 509.68 0]
                                             boundingObject Box {
-                                              size 0.02 0.02 0.001
+                                              size 0.075 0.04 0.001
                                             }
                                             physics Physics {
                                               density -1
@@ -2387,13 +2387,13 @@ PROTO NAO [
                                             }
                                           }
                                           TouchSensor {
-                                            translation -0.045110 0.029900 -0.029650
+                                            translation -0.045110 0.029900 -0.015250
                                             rotation 0.707108 -0.000001 0.707105 3.141591
                                             name "RFoot/FSR/RearRight"
                                             type "force-3d"
                                             lookupTable [0 0 0, 5000 509.68 0]
                                             boundingObject Box {
-                                              size 0.02 0.02 0.001
+                                              size 0.075 0.04 0.001
                                             }
                                             physics Physics {
                                               density -1

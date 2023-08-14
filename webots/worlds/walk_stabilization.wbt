@@ -30,17 +30,65 @@ TexturedBackground {
 TexturedBackgroundLight {
   texture "stadium"
 }
-UnevenTerrain {
-  translation    -3.0 -2.0 -0.01
+DEF UnevenTerrain1 UnevenTerrain {
+  translation    -3.0 -1.5 -0.01
   rotation       0 0 1 1.5708
-  size           2.0 2.0 0.1
-  xDimension     8
-  yDimension     8
+  size           1.9 1.9 0.13
+  xDimension     32
+  yDimension     32
   appearance     Grass { textureTransform TextureTransform { scale 2 2 } }
-  randomSeed     156
+  randomSeed     1
   flatCenter     FALSE
   flatBounds     TRUE
-  perlinNOctaves 3
+  perlinNOctaves 4
+}
+DEF UnevenTerrain2 UnevenTerrain {
+  translation    -1.5 -1.75 -0.01
+  rotation       0 0 1 1.5708
+  size           1.9 1.9 0.13
+  xDimension     32
+  yDimension     32
+  appearance     Grass { textureTransform TextureTransform { scale 2 2 } }
+  randomSeed     1
+  flatCenter     FALSE
+  flatBounds     TRUE
+  perlinNOctaves 4
+}
+DEF UnevenTerrain3 UnevenTerrain {
+  translation    -1.1 -1.75 -0.01
+  rotation       0 0 1 1.5708
+  size           1.9 1.9 0.13
+  xDimension     32
+  yDimension     32
+  appearance     Grass { textureTransform TextureTransform { scale 2 2 } }
+  randomSeed     1
+  flatCenter     FALSE
+  flatBounds     TRUE
+  perlinNOctaves 4
+}
+DEF UnevenTerrain4 UnevenTerrain {
+  translation    -2.5 -1.75 -0.01
+  rotation       0 0 1 1.5708
+  size           1.9 1.9 0.13
+  xDimension     32
+  yDimension     32
+  appearance     Grass { textureTransform TextureTransform { scale 2 2 } }
+  randomSeed     1
+  flatCenter     FALSE
+  flatBounds     TRUE
+  perlinNOctaves 4
+}
+DEF UnevenTerrain5 UnevenTerrain {
+  translation    -2.0 -1.75 -0.01
+  rotation       0 0 1 1.5708
+  size           1.9 1.9 0.13
+  xDimension     32
+  yDimension     32
+  appearance     Grass { textureTransform TextureTransform { scale 2 2 } }
+  randomSeed     1
+  flatCenter     FALSE
+  flatBounds     TRUE
+  perlinNOctaves 4
 }
 Field {
 }
@@ -49,10 +97,10 @@ SupervisorTelevision {
   rotation 0 0 1 -1.5707953071795862
   controller "start_playing_with_ml"
 }
-SPLBall {
-  translation -2.5 -1 0.05
+DEF SPLBall SPLBall {
+  translation -2.5 -0.5 0.05
 }
-NAO {
+DEF NAO NAO {
   translation -3.2 -3.0 0.333369
   rotation 0 0 1 1.57079632679
   name "webots2"
