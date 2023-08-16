@@ -12,10 +12,12 @@ use types::{
 };
 
 const ACTION_SIZE: usize = 26;
-const OBSERVATION_SIZE: usize = 2 * 26 + 2 * 8 + 1; // + 2;
+const OBSERVATION_SIZE: usize = 4 * 26 + 2 * 8 + 1 + 2 * 2; // + 2;
 
 pub struct JointCommandSender {
     positions_residual: Joints<f32>,
+    previous_positions: Joints<f32>,
+    previous_velocities: Joints<f32>,
     event_hub: EventHub,
     clients: HashMap<u64, Responder>,
 }
@@ -60,6 +62,8 @@ impl JointCommandSender {
     pub fn new(_context: CreationContext) -> Result<Self> {
         Ok(Self {
             positions_residual: Joints::<f32>::default(),
+            previous_positions: Joints::<f32>::default(),
+            previous_velocities: Joints::<f32>::default(),
             event_hub: simple_websockets::launch(9990).expect("failed to listen on port 9990"),
             clients: HashMap::new(),
         })
@@ -143,16 +147,23 @@ impl JointCommandSender {
                     // apply action
                     self.positions_residual = Joints::from_angles(action);
 
+                    let velocities = current_positions - self.previous_positions;
+                    let accelerations = velocities - self.previous_velocities;
+
                     // respond with observation
                     let responder = self.clients.get(&client_id).unwrap();
                     let mut bytes = [0; OBSERVATION_SIZE * 4];
                     let observation = compose_observation(
                         &current_positions,
+                        &velocities,
+                        &accelerations,
                         &compensated_positions,
                         flat_imu(inertial_measurement_unit),
                         flat_fsr(force_sensitive_resistors),
                         context.world_state,
                     );
+                    self.previous_positions = current_positions;
+                    self.previous_velocities = velocities;
                     LittleEndian::write_f32_into(&observation, &mut bytes);
                     responder.send(simple_websockets::Message::Binary(bytes.into()));
                 }
@@ -220,26 +231,47 @@ fn flat_fsr(fsr: &ForceSensitiveResistors) -> [f32; 8] {
 
 fn compose_observation(
     current_positions: &Joints<f32>,
-    positions: &Joints<f32>,
+    current_velocities: &Joints<f32>,
+    current_accelerations: &Joints<f32>,
+    target_positions: &Joints<f32>,
     inertial_measurement_unit: [f32; 8],
     force_sensitive_resistors: [f32; 8],
     world_state: &WorldState,
 ) -> [f32; OBSERVATION_SIZE] {
     let mut distance_to_kick_pose = [10.0];
-    if world_state.kick_decisions.is_some() {
+    let mut absolute_robot_position = [-3.2, -3.0];
+    let mut absolute_kick_pose_position = [-3.2, 0.0];
+    if world_state.kick_decisions.is_some() && world_state.robot.robot_to_field.is_some() {
         distance_to_kick_pose = [world_state.kick_decisions.as_ref().unwrap()[0]
             .kick_pose
             .translation
             .vector
-            .norm()]
+            .norm()];
+        let robot_vector = world_state
+            .robot
+            .robot_to_field
+            .as_ref()
+            .unwrap()
+            .translation
+            .vector;
+        absolute_robot_position = [robot_vector.x, robot_vector.y];
+        let kick_pose_vector = (world_state.robot.robot_to_field.unwrap()
+            * world_state.kick_decisions.as_ref().unwrap()[0].kick_pose)
+            .translation
+            .vector;
+        absolute_kick_pose_position = [kick_pose_vector.x, kick_pose_vector.y];
     }
     <[f32; OBSERVATION_SIZE]>::try_from(
         [
             current_positions.to_angles().as_slice(),
-            positions.to_angles().as_slice(),
+            current_velocities.to_angles().as_slice(),
+            current_accelerations.to_angles().as_slice(),
+            target_positions.to_angles().as_slice(),
             inertial_measurement_unit.as_slice(),
             force_sensitive_resistors.as_slice(),
             distance_to_kick_pose.as_slice(),
+            absolute_robot_position.as_slice(),
+            absolute_kick_pose_position.as_slice(),
         ]
         .concat(),
     )

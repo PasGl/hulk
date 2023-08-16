@@ -25,8 +25,8 @@ from websocket import create_connection
 CACHED_ENV = None
 ACTION_SIZE = 2 # adjust this if you want to include more joints (see step function)
 FULL_ACTION_SIZE = 26
-OBSERVATION_SIZE = (2 * 26) +  (2 * 8) + 1
-FULL_OBSERVATION_SIZE = (2 * 26) + (2 * 8) + 1
+OBSERVATION_SIZE = (4 * 26) +  (2 * 8) + 1 + (2 * 2)
+FULL_OBSERVATION_SIZE = (4 * 26) + (2 * 8) + 1 + (2 * 2)
 
 
 class NAOEnvMaker:
@@ -42,24 +42,22 @@ class NAOEnvMaker:
 class NAOEnv(gym.GoalEnv):
     def __init__(self, render_mode='none', ik=0, reward_type='sparse'):
         print('\033[92m' + 'Creating new Env' + '\033[0m')
+        global CACHED_ENV
+        CACHED_ENV = self
         self.reward_type = reward_type
         self.delay = 0.01
-        self.fps = 0
-        self.fps_count = 0
         self.step_ctr = 0
         self.resets = 0
         self.previous_distance = 100
         self.start_time = time.time()
-        self.nao_websocket = None #create_connection("ws://localhost:9990")
-        self.webots_supervisor_websocket = create_connection("ws://localhost:9980")
-        global CACHED_ENV
-        CACHED_ENV = self
+        self.fps_time = time.time()
+        self.fps_counter = 0
         self.action_space = spaces.Box(-0.2, 0.2,
                                        shape=(ACTION_SIZE,), dtype='float32')
         self.observation_space = spaces.Dict(dict(
-            desired_goal=spaces.Box(0., 10., shape=(1,), dtype='float32'),
-            achieved_goal=spaces.Box(0., 10., shape=(1,), dtype='float32'),
-            observation=spaces.Box(-3., 3., shape=(OBSERVATION_SIZE-1,), dtype='float32'),))
+            desired_goal=spaces.Box(-4.5, 4.5, shape=(2,), dtype='float32'),
+            achieved_goal=spaces.Box(-4.5, 4.5, shape=(2,), dtype='float32'),
+            observation=spaces.Box(-3., 3., shape=(OBSERVATION_SIZE-5,), dtype='float32'),))
         self.initial_obs = None
         self.nao_websocket = create_connection("ws://localhost:9990")
         self.webots_supervisor_websocket = create_connection("ws://localhost:9980")
@@ -75,39 +73,27 @@ class NAOEnv(gym.GoalEnv):
     def reset(self):
         super().reset()
         self.resets += 1
+        self.fps_time = time.time()
+        self.fps_counter = 0
         self.seed()
         action = np.array([0.0 for _ in range(ACTION_SIZE)])
         self.step_ctr = 0
-        self.previous_distance = 100
         obs, r, done, info = self.step(action)
         if info['is_success']:
             print("Success !!!!")
         print("Resets:", self.resets)
-        self.webots_supervisor_websocket.send("reset")
+        self.webots_supervisor_websocket.send_binary(b'0')
+        self.webots_supervisor_websocket.recv()
         time.sleep(4.00)
         obs, r, done, info = self.step(action)
         self.initial_obs = obs
         return obs
 
     def compute_reward(self, achieved_goal, goal, info):
-        if self.previous_distance == 100 or achieved_goal[0] == 10:
-            self.previous_distance = achieved_goal[0]
-            return 0.0
+        if math.dist(achieved_goal, goal) < 0.3:
+            return math.dist(self.initial_obs['achieved_goal'],self.initial_obs['desired_goal'])/((self.step_ctr+1)/1000)
         else:
-            old_distance = self.previous_distance
-            self.previous_distance = achieved_goal[0]
-            #return (old_distance - achieved_goal[0])
-            #return (old_distance - achieved_goal[0])/achieved_goal[0] #non-sparse 1
-            #return (old_distance - achieved_goal[0])/math.sqrt(self.step_ctr+1)
-            #return 1/achieved_goal[0]
-            #if achieved_goal[0] < 0.2:
-            #    return 1.0/((self.step_ctr+1)/2000)
-            #else:
-            #    return 0.0
-            if achieved_goal[0] < 0.2:
-                return self.initial_obs['achieved_goal'][0]/((self.step_ctr+1)/1000)
-            else:
-                return 0.0
+            return 0.0
 
     def step(self, action):
         full_action = [0.0 for _ in range(FULL_ACTION_SIZE)]
@@ -125,18 +111,26 @@ class NAOEnv(gym.GoalEnv):
         
         self.nao_websocket.send_binary(action_bin)
         observation_bin = self.nao_websocket.recv()
- 
-        obs = struct.unpack('%sf' % FULL_OBSERVATION_SIZE, observation_bin)
-        obs = {'observation': np.array(obs[:26+26+8+8]), 'achieved_goal': np.array([obs[26+26+8+8]]),
-               'desired_goal': np.array([0.0]),
-               'non_noisy_obs': obs[:26+26+8+8]}
+
+        obs_unpacked = struct.unpack('%sf' % FULL_OBSERVATION_SIZE, observation_bin)
+        translations = obs_unpacked[26+26+26+26+8+8+1:]
+        obs = {'observation': np.array(obs_unpacked[:26+26+26+26+8+8]), 'achieved_goal': np.array([translations[0], translations[1]]),
+               'desired_goal': np.array([translations[2], translations[3]]),
+               'non_noisy_obs': obs_unpacked[:26+26+26+26+8+8]}
+        
+        self.fps_counter += 1
+        if time.time() - self.fps_time > 1:
+            #print("FPS:", self.fps_counter)
+            self.fps_time = time.time()
+            self.fps_counter = 0
+
         is_success = 0
         done = False
         if self.initial_obs is not None:
-            if obs['achieved_goal'][0] < 0.2:
+            if math.dist([translations[0], translations[1]], [translations[2], translations[3]]) < 0.3:
                 is_success = 1
                 done = True
-            elif obs['achieved_goal'][0] == 10.0:
+            elif obs_unpacked[26+26+26+26+8+8] == 10.0:
                 done = True
 
         info = {'is_success': is_success}
