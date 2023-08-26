@@ -12,12 +12,14 @@ use types::{
 };
 
 const ACTION_SIZE: usize = 26;
-const OBSERVATION_SIZE: usize = 4 * 26 + 2 * 8 + 1 + 2 * 2; // + 2;
+const OBSERVATION_SIZE: usize = 4 * 26 + 3 * 2 + 2 * 8 + 1 + 2 * 2; // + 2;
 
 pub struct JointCommandSender {
     positions_residual: Joints<f32>,
     previous_positions: Joints<f32>,
     previous_velocities: Joints<f32>,
+    previous_residual: [f32; 2],
+    previous_residual_velocities: [f32; 2],
     event_hub: EventHub,
     clients: HashMap<u64, Responder>,
 }
@@ -64,6 +66,8 @@ impl JointCommandSender {
             positions_residual: Joints::<f32>::default(),
             previous_positions: Joints::<f32>::default(),
             previous_velocities: Joints::<f32>::default(),
+            previous_residual: [0.0, 0.0],
+            previous_residual_velocities: [0.0, 0.0],
             event_hub: simple_websockets::launch(9990).expect("failed to listen on port 9990"),
             clients: HashMap::new(),
         })
@@ -146,9 +150,21 @@ impl JointCommandSender {
 
                     // apply action
                     self.positions_residual = Joints::from_angles(action);
+                    let residual = [
+                        self.positions_residual.left_leg.ankle_pitch,
+                        self.positions_residual.right_leg.ankle_pitch,
+                    ];
 
                     let velocities = current_positions - self.previous_positions;
+                    let residual_velocities = [
+                        residual[0] - self.previous_residual[0],
+                        residual[1] - self.previous_residual[1],
+                    ];
                     let accelerations = velocities - self.previous_velocities;
+                    let residual_accelerations = [
+                        residual_velocities[0] - self.previous_residual_velocities[0],
+                        residual_velocities[1] - self.previous_residual_velocities[1],
+                    ];
 
                     // respond with observation
                     let responder = self.clients.get(&client_id).unwrap();
@@ -158,12 +174,17 @@ impl JointCommandSender {
                         &velocities,
                         &accelerations,
                         &compensated_positions,
+                        &self.previous_residual,
+                        &residual_velocities,
+                        &residual_accelerations,
                         flat_imu(inertial_measurement_unit),
                         flat_fsr(force_sensitive_resistors),
                         context.world_state,
                     );
                     self.previous_positions = current_positions;
+                    self.previous_residual = residual;
                     self.previous_velocities = velocities;
+                    self.previous_residual_velocities = residual_velocities;
                     LittleEndian::write_f32_into(&observation, &mut bytes);
                     responder.send(simple_websockets::Message::Binary(bytes.into()));
                 }
@@ -234,6 +255,9 @@ fn compose_observation(
     current_velocities: &Joints<f32>,
     current_accelerations: &Joints<f32>,
     target_positions: &Joints<f32>,
+    previous_residual: &[f32; 2],
+    residual_velocities: &[f32; 2],
+    residual_accelerations: &[f32; 2],
     inertial_measurement_unit: [f32; 8],
     force_sensitive_resistors: [f32; 8],
     world_state: &WorldState,
@@ -267,6 +291,9 @@ fn compose_observation(
             current_velocities.to_angles().as_slice(),
             current_accelerations.to_angles().as_slice(),
             target_positions.to_angles().as_slice(),
+            previous_residual.as_slice(),
+            residual_velocities.as_slice(),
+            residual_accelerations.as_slice(),
             inertial_measurement_unit.as_slice(),
             force_sensitive_resistors.as_slice(),
             distance_to_kick_pose.as_slice(),

@@ -18,7 +18,7 @@ use super::{
     defend::Defend,
     dribble, fall_safely,
     head::LookAction,
-    initial, intercept_ball, jump, look_around, lost_ball, penalize, prepare_jump, search,
+    initial, intercept_ball, jump, look_around, lost_ball, nothing, penalize, prepare_jump, search,
     sit_down, stand, stand_up, support, unstiff, walk_to_kick_off, walk_to_penalty_kick,
     walk_to_pose::{WalkAndStand, WalkPathPlanner},
 };
@@ -100,7 +100,7 @@ impl Behavior {
             Action::Penalize,
             Action::Initial,
             Action::FallSafely,
-            Action::StandUp,
+            //Action::StandUp,
             Action::Stand,
             Action::InterceptBall,
             Action::Calibrate,
@@ -133,6 +133,7 @@ impl Behavior {
             Role::Striker => match world_state.filtered_game_state {
                 None | Some(FilteredGameState::Playing { ball_is_free: true }) => {
                     actions.push(Action::Dribble);
+                    actions.push(Action::Nothing);
                 }
                 Some(FilteredGameState::Ready {
                     kicking_team: Team::Hulks,
@@ -227,6 +228,7 @@ impl Behavior {
                         dribble_path.clone(),
                     ),
                     Action::Jump => jump::execute(world_state),
+                    Action::Nothing => nothing::execute(),
                     Action::PrepareJump => prepare_jump::execute(world_state),
                     Action::Search => search::execute(
                         world_state,

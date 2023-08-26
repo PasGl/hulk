@@ -21,6 +21,7 @@ pub enum Action {
     DefendPenaltyKick,
     Jump,
     PrepareJump,
+    Nothing,
     SupportLeft,
     SupportRight,
     SupportStriker,

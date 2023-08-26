@@ -31,7 +31,7 @@ TexturedBackgroundLight {
   texture "stadium"
 }
 DEF UnevenTerrain1 UnevenTerrain {
-  translation    -3.0 -1.5 -0.01
+  translation    -3.0 -1.5 -1.01
   rotation       0 0 1 1.5708
   size           1.9 1.9 0.13
   xDimension     32
@@ -43,7 +43,7 @@ DEF UnevenTerrain1 UnevenTerrain {
   perlinNOctaves 4
 }
 DEF UnevenTerrain2 UnevenTerrain {
-  translation    -1.5 -1.75 -0.01
+  translation    -1.5 -1.75 -1.01
   rotation       0 0 1 1.5708
   size           1.9 1.9 0.13
   xDimension     32
@@ -55,7 +55,7 @@ DEF UnevenTerrain2 UnevenTerrain {
   perlinNOctaves 4
 }
 DEF UnevenTerrain3 UnevenTerrain {
-  translation    -1.1 -1.75 -0.01
+  translation    -1.1 -1.75 -1.01
   rotation       0 0 1 1.5708
   size           1.9 1.9 0.13
   xDimension     32
@@ -67,7 +67,7 @@ DEF UnevenTerrain3 UnevenTerrain {
   perlinNOctaves 4
 }
 DEF UnevenTerrain4 UnevenTerrain {
-  translation    -2.5 -1.75 -0.01
+  translation    -1.1 -1.7 -1.01
   rotation       0 0 1 1.5708
   size           1.9 1.9 0.13
   xDimension     32
@@ -79,7 +79,19 @@ DEF UnevenTerrain4 UnevenTerrain {
   perlinNOctaves 4
 }
 DEF UnevenTerrain5 UnevenTerrain {
-  translation    -2.0 -1.75 -0.01
+  translation    -1.1 -1.65 -1.01
+  rotation       0 0 1 1.5708
+  size           1.9 1.9 0.13
+  xDimension     32
+  yDimension     32
+  appearance     Grass { textureTransform TextureTransform { scale 2 2 } }
+  randomSeed     1
+  flatCenter     FALSE
+  flatBounds     TRUE
+  perlinNOctaves 4
+}
+DEF UnevenTerrain6 UnevenTerrain {
+  translation    -1.1 -1.6 -1.01
   rotation       0 0 1 1.5708
   size           1.9 1.9 0.13
   xDimension     32
@@ -98,7 +110,7 @@ SupervisorTelevision {
   controller "start_playing_with_ml"
 }
 DEF SPLBall SPLBall {
-  translation -2.5 -0.5 0.05
+  translation -3.2 0.0 0.05
 }
 DEF NAO NAO {
   translation -3.2 -3.0 0.333369
