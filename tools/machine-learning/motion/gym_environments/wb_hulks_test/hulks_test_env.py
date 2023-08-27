@@ -50,6 +50,8 @@ class NAOEnv(gym.GoalEnv):
         self.start_time = time.time()
         self.fps_time = time.time()
         self.fps_counter = 0
+        self.current_episode_success = False
+        self.current_episode_fallen = False
         self.action_space = spaces.Box(-0.1, 0.1,
                                        shape=(ACTION_SIZE,), dtype='float32')
         self.observation_space = spaces.Dict(dict(
@@ -58,7 +60,6 @@ class NAOEnv(gym.GoalEnv):
             observation=spaces.Box(-3., 3., shape=(OBSERVATION_SIZE-5,), dtype='float32'),))
         self.nao_websocket = create_connection("ws://localhost:9990")
         self.webots_supervisor_websocket = create_connection("ws://localhost:9980")
-        self.fallen = False
         self.reset()
 
     def seed(self, seed=None):
@@ -70,30 +71,43 @@ class NAOEnv(gym.GoalEnv):
 
     def reset(self):
         super().reset()
+        self.webots_supervisor_websocket.send_binary(b'3')
+        self.webots_supervisor_websocket.recv()
         self.resets += 1
+        if self.current_episode_success:
+            print("Success !!! @ reset ", self.resets)
+        if self.current_episode_fallen:
+            print("Fallen :(   @ reset ", self.resets)
+        if not self.current_episode_success and not self.current_episode_fallen:
+            print("Not reached @ reset ", self.resets)
+        
         self.fps_time = time.time()
         self.fps_counter = 0
         self.seed()
         action = np.array([0.0 for _ in range(ACTION_SIZE)])
         self.step_ctr = 0
-        self.initial_info = {'initial_distance': 3.0, 'previous_distance': 3.0, 'fallen': 0.0}
-        self.previous_distance = 3.0
+        self.initial_info = {'initial_distance': 1.5, 'previous_distance': 1.5, 'fallen': 0.0}
+        self.previous_distance = 1.5
         obs, r, done, info = self.step(action)
-        if info['is_success']:
-            print("Success !!!!")
-        if self.fallen:
-            print("Fallen :(")
-        print("Resets:", self.resets)
+        self.webots_supervisor_websocket.send_binary(b'3')
+        self.webots_supervisor_websocket.recv()
         self.webots_supervisor_websocket.send_binary(b'0')
         self.webots_supervisor_websocket.recv()
-        time.sleep(4.00)
+        self.webots_supervisor_websocket.send_binary(b'2')
+        self.webots_supervisor_websocket.recv()
+        #time.sleep(4.00)
         obs, r, done, info = self.step(action)
         self.initial_info = info
         self.initial_info["initial_distance"] = math.dist(obs["achieved_goal"], obs["desired_goal"])
         self.initial_info["previous_distance"] = math.dist(obs["achieved_goal"], obs["desired_goal"])
         self.initial_info["fallen"] = 0.0
-        self.fallen = False
         self.previous_distance = math.dist(obs["achieved_goal"], obs["desired_goal"])
+        self.current_episode_success = False
+        self.current_episode_fallen = False
+        #self.webots_supervisor_websocket.send_binary(b'2')
+        #self.webots_supervisor_websocket.recv()
+        self.webots_supervisor_websocket.send_binary(b'2')
+        self.webots_supervisor_websocket.recv()
         return obs
 
     def compute_reward(self, achieved_goal, goal, info):
@@ -104,7 +118,7 @@ class NAOEnv(gym.GoalEnv):
                 reward =  -1.0
             elif math.dist(achieved_goal, goal) < 0.5:
                 reward =  0.0
-                #reward =  0.0
+                #reward =  1.0
                 #reward = 1.0 - (math.dist(achieved_goal, goal) / info["initial_distance"])
             else:
                 #reward =  0.0
@@ -114,6 +128,8 @@ class NAOEnv(gym.GoalEnv):
         return np.array(reward)
 
     def step(self, action):
+        self.webots_supervisor_websocket.send_binary(b'3')
+        self.webots_supervisor_websocket.recv()
         full_action = [0.0 for _ in range(FULL_ACTION_SIZE)]
         full_action[12] = action[0] # left ankle pitch
         full_action[24] = action[1] # right ankle pitch
@@ -153,14 +169,17 @@ class NAOEnv(gym.GoalEnv):
         if self.initial_info is not None:
             if math.dist([translations[0], translations[1]], [translations[2], translations[3]]) < 0.5:
                 is_success = 1
+                self.current_episode_success = True
 #                done = True
 #            elif obs_unpacked[26+26+26+26+8+8] == 10.0:
 #                done = True
         if obs_unpacked[26+26+26+26+2+2+2+8+8] == 10.0:
             fallen = 1.0
-            self.fallen = True
+            self.current_episode_fallen = True
+            self.current_episode_success = False
         else:
             fallen = 0.0
+            self.current_episode_fallen = False
         info = {'is_success': is_success, 
                 'initial_distance': self.initial_info['initial_distance'],
                 'previous_distance': self.previous_distance,
@@ -169,4 +188,6 @@ class NAOEnv(gym.GoalEnv):
         r = self.compute_reward(obs['achieved_goal'], obs['desired_goal'], info)
         self.previous_distance = math.dist(obs["achieved_goal"], obs["desired_goal"])
         self.step_ctr += 1
+        self.webots_supervisor_websocket.send_binary(b'2')
+        self.webots_supervisor_websocket.recv()
         return obs, r, done, info

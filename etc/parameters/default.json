@@ -390,7 +390,7 @@
     "goal_post_obstacle_radius": 0.2
   },
   "role_assignment": {
-    "forced_role": null,
+    "forced_role": "Striker",
     "keeper_replacementkeeper_switch_time": { "nanos": 0, "secs": 12 }
   },
   "stand_up": {
