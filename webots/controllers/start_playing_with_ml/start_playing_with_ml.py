@@ -19,9 +19,11 @@ count = 0
 resetting = False
 penalized = True
 paused = False
+initializing = True
 fps_time = time.time()
 fps_counter = 0
 resetting_websocket = None
+step_websocket = None
 
 def handle_commands(websocket):
     global paused
@@ -29,6 +31,8 @@ def handle_commands(websocket):
     global resetting
     global count
     global resetting_websocket
+    global step_websocket
+    global initializing
     for message in websocket:
         if message == b'0':
             chest_button_channel.send(b'\x01')
@@ -42,6 +46,7 @@ def handle_commands(websocket):
                 uneven_terrain_patch.getField('translation').setSFVec3f([random.uniform(-3.7, -2.7), random.uniform(-2.5, -2.0), -0.01])
                 uneven_terrain_patch.getField('size').setSFVec3f([random.uniform(0.2, 0.4), random.uniform(1.2, 2.0), random.uniform(0.03, 0.05)])
             resetting_websocket = websocket
+            initializing = True
         elif message == b'1':
             nao_pos = nao_translation.getSFVec3f()
             ball_pos = ball_translation.getSFVec3f()
@@ -53,6 +58,10 @@ def handle_commands(websocket):
         elif message == b'3':
             paused = False
             websocket.send("unpaused")
+        elif message == b'4':
+            initializing = False
+            step_websocket = websocket
+        
 
 class WebSocketThread(Thread):
     def __init__(self):
@@ -67,26 +76,35 @@ websocket_thread.start()
 
 while True:
     if not paused:
-        supervisor.step(TIME_STEP) # != -1:
-        if not resetting and count == 20:
-            chest_button_channel.send(b'\x01')
-        if not resetting and count == 220:
-            chest_button_channel.send(b'\x01')
-        if not resetting and count == 250:
-            if penalized:
+        if initializing or step_websocket is not None:
+            supervisor.step(TIME_STEP) # != -1:
+            if not resetting and count == 20:
                 chest_button_channel.send(b'\x01')
-                penalized = not penalized
-                if resetting_websocket is not None:
-                    resetting_websocket.send("resetted")
-                    resetting_websocket = None
-        if resetting and count == 250:
-                resetting = False
-                nao_node.getField('translation').setSFVec3f([-3.2, -3.0, 0.333369])
-                nao_node.getField('rotation').setSFRotation([0, 0, 1, 1.57079632679])
-                nao_node.setVelocity([0, 0, 0])
-                count = 220
-        count += 1
-        fps_counter += 1
+            if not resetting and count == 220:
+                chest_button_channel.send(b'\x01')
+            if not resetting and count == 250:
+                if penalized:
+                    chest_button_channel.send(b'\x01')
+                    penalized = not penalized
+                    if resetting_websocket is not None:
+                        resetting_websocket.send("resetted")
+                        resetting_websocket = None
+                        #initializing = False
+            if resetting and count == 250:
+                    resetting = False
+                    nao_node.getField('translation').setSFVec3f([-3.2, -3.0, 0.333369])
+                    nao_node.getField('rotation').setSFRotation([0, 0, 1, 1.57079632679])
+                    nao_node.setVelocity([0, 0, 0])
+                    count = 220
+            count += 1
+            fps_counter += 1
+            if step_websocket is not None:
+                step_websocket.send("stepped")
+                step_websocket = None
+        else:
+            time.sleep(0.001)
+    else:
+        time.sleep(0.01)
 
     if time.time() - fps_time > 1:
         #print("FPS:", fps_counter)

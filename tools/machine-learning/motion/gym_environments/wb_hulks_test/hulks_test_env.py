@@ -18,7 +18,7 @@ from websocket import create_connection
 
 # Calling Scilab-rl after Webots world walk_stabilization.wbt started
 #
-# python3 src/main.py n_epochs=100 wandb=0 algorithm=sac env=wb-hulks-experiment-v0
+# python3 src/main.py n_epochs=500 early_stop_last_n=10 eval_after_n_steps=15000 wandb=0 algorithm=ddpg env=wb-hulks-experiment-v0
 
 CACHED_ENV = None
 ACTION_SIZE = 2 # adjust this if you want to include more joints (see step function)
@@ -50,9 +50,10 @@ class NAOEnv(gym.GoalEnv):
         self.start_time = time.time()
         self.fps_time = time.time()
         self.fps_counter = 0
+        self.fps_counter_history = []
         self.current_episode_success = False
         self.current_episode_fallen = False
-        self.action_space = spaces.Box(-0.1, 0.1,
+        self.action_space = spaces.Box(-0.2, 0.2,
                                        shape=(ACTION_SIZE,), dtype='float32')
         self.observation_space = spaces.Dict(dict(
             desired_goal=spaces.Box(-4.5, 4.5, shape=(2,), dtype='float32'),
@@ -74,12 +75,16 @@ class NAOEnv(gym.GoalEnv):
         self.webots_supervisor_websocket.send_binary(b'3')
         self.webots_supervisor_websocket.recv()
         self.resets += 1
+        fps = 0
+        if len(self.fps_counter_history) > 0:
+            fps = np.average(self.fps_counter_history)
+            self.fps_counter_history = []
         if self.current_episode_success:
-            print("Success !!! @ reset ", self.resets)
+            print("Success !!!  @  reset", self.resets, " @ ", round(fps,1), "FPS")
         if self.current_episode_fallen:
-            print("Fallen :(   @ reset ", self.resets)
+            print("Fallen :(    @  reset", self.resets, " @ ", round(fps,1), "FPS")
         if not self.current_episode_success and not self.current_episode_fallen:
-            print("Not reached @ reset ", self.resets)
+            print("Not reached  @  reset", self.resets, " @ ", round(fps,1), "FPS")
         
         self.fps_time = time.time()
         self.fps_counter = 0
@@ -116,7 +121,7 @@ class NAOEnv(gym.GoalEnv):
         else:
             if info["fallen"] == 1.0:
                 reward =  -1.0
-            elif math.dist(achieved_goal, goal) < 0.5:
+            elif math.dist(achieved_goal, goal) < 0.7:
                 reward =  0.0
                 #reward =  1.0
                 #reward = 1.0 - (math.dist(achieved_goal, goal) / info["initial_distance"])
@@ -130,6 +135,8 @@ class NAOEnv(gym.GoalEnv):
     def step(self, action):
         self.webots_supervisor_websocket.send_binary(b'3')
         self.webots_supervisor_websocket.recv()
+        #self.webots_supervisor_websocket.send_binary(b'4')
+        #self.webots_supervisor_websocket.recv()
         full_action = [0.0 for _ in range(FULL_ACTION_SIZE)]
         full_action[12] = action[0] # left ankle pitch
         full_action[24] = action[1] # right ankle pitch
@@ -161,13 +168,14 @@ class NAOEnv(gym.GoalEnv):
         self.fps_counter += 1
         if time.time() - self.fps_time > 1:
             #print("FPS:", self.fps_counter)
+            self.fps_counter_history.append(self.fps_counter)
             self.fps_time = time.time()
             self.fps_counter = 0
 
         is_success = 0
         done = False
         if self.initial_info is not None:
-            if math.dist([translations[0], translations[1]], [translations[2], translations[3]]) < 0.5:
+            if math.dist([translations[0], translations[1]], [translations[2], translations[3]]) < 0.7:
                 is_success = 1
                 self.current_episode_success = True
 #                done = True

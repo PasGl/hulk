@@ -12,6 +12,7 @@ EXTERNPROTO "../protos/SupervisorTelevision.proto"
 WorldInfo {
   basicTimeStep 10
   FPS 15
+  ERP 0.8
   contactProperties [
     ContactProperties {
       coulombFriction [
@@ -70,5 +71,5 @@ DEF NAO NAO {
   name "webots2"
   controller "hulk"
   supervisor TRUE
-  selfCollision TRUE
+  selfCollision FALSE
 }
